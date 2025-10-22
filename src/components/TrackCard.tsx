@@ -12,16 +12,14 @@ export default function TrackCard({
   bpm,
   trackKey,
   genre,
-}: Props) {
+}: any) {
   return (
-    <div className="bg-background text-foreground border p-4 rounded shadow">
-      <h2 className="text-xl font-bold">{title}</h2>
-      <p className="text-sm">{artist}</p>
-      <div className="mt-2 flex gap-4 text-sm">
-        <span>BPM: {bpm}</span>
-        <span>Key: {trackKey}</span>
-        {genre && <span>Genre: {genre}</span>}
-      </div>
+    <div className="border p-4 rounded shadow">
+      <h2 className="text-lg font-semibold">{title}</h2>
+      <p>{artist}</p>
+      <p>BPM: {bpm}</p>
+      <p>Key: {trackKey}</p>
+      {genre && <p>Genre: {genre}</p>}
     </div>
   );
 }

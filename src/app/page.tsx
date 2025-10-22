@@ -1,30 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import TrackCard from "@/components/TrackCard";
 import TrackTable from "@/components/TrackTable";
 import JSONUploader from "@/components/JSONUploader";
+
 import { analyzeTrack } from "@/lib/trackAnalyzer";
 import { exportToCSV } from "@/lib/exportCSV";
 
-type RawTrack = {
-  title: string;
-  artist: string;
-  bpm?: number;
-  key?: string;
-  genre?: string;
-};
-
 export default function Page() {
-  const [tracks, setTracks] = useState(() =>
-    [
+  const [tracks, setTracks] = useState<any[]>([]);
+
+  useEffect(() => {
+    const initial = [
       { title: "Hypnotic Pulse", artist: "Rødhåd" },
       { title: "Parallel Shift", artist: "Antigone", bpm: 132 },
       { title: "Eclipse", artist: "nthng", key: "8A", genre: "Deep Techno" },
-    ].map(analyzeTrack)
-  );
+    ].map(analyzeTrack);
 
-  const handleImport = (raw: RawTrack[]) => {
+    setTracks(initial);
+  }, []);
+
+  const handleImport = (raw: any[]) => {
     const analyzed = raw.map(analyzeTrack);
     setTracks(analyzed);
   };
@@ -37,7 +34,7 @@ export default function Page() {
 
       <button
         onClick={() => exportToCSV(tracks)}
-        className="bg-primary text-white px-4 py-2 rounded"
+        className="bg-blue-600 text-white px-4 py-2 rounded"
       >
         Export CSV
       </button>

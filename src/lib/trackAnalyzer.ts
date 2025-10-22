@@ -6,15 +6,20 @@ export type RawTrack = {
   genre?: string;
 };
 
-export type AnalyzedTrack = RawTrack & {
+export type AnalyzedTrack = {
+  title: string;
+  artist: string;
   bpm: number;
-  key: string;
+  trackKey: string;
+  genre?: string;
 };
 
 export function analyzeTrack(track: RawTrack): AnalyzedTrack {
   return {
-    ...track,
+    title: track.title,
+    artist: track.artist,
     bpm: track.bpm ?? Math.floor(Math.random() * 40 + 120),
-    key: track.key ?? "Am",
+    trackKey: track.key ?? "Am",
+    genre: track.genre,
   };
 }

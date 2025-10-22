@@ -13,8 +13,8 @@ export default function Page() {
   return (
     <main className="p-8 grid gap-4">
       {tracks.map((track, i) => {
-        const { key, ...rest } = track;
-        return <TrackCard key={String(i)} {...rest} />;
+        const { trackKey, ...rest } = track;
+        return <TrackCard key={track.title} trackKey={trackKey} {...rest} />;
       })}
     </main>
   );

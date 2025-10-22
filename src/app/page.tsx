@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import TrackCard from "@/components/TrackCard";
 import TrackTable from "@/components/TrackTable";
 import JSONUploader from "@/components/JSONUploader";
-
+import TracklistParser from "@/components/TracklistParser";
 import { analyzeTrack } from "@/lib/trackAnalyzer";
 import { exportToCSV } from "@/lib/exportCSV";
 
@@ -17,7 +17,6 @@ export default function Page() {
       { title: "Parallel Shift", artist: "Antigone", bpm: 132 },
       { title: "Eclipse", artist: "nthng", key: "8A", genre: "Deep Techno" },
     ].map(analyzeTrack);
-
     setTracks(initial);
   }, []);
 
@@ -30,6 +29,10 @@ export default function Page() {
     <main className="p-8 space-y-8">
       <h1 className="text-2xl font-bold">🎧 Trackscope</h1>
 
+      <TracklistParser
+        onParse={(parsed) => setTracks(parsed.map(analyzeTrack))}
+      />
+
       <JSONUploader onImport={handleImport} />
 
       <button
@@ -41,7 +44,7 @@ export default function Page() {
 
       <div className="grid md:grid-cols-2 gap-4">
         {tracks.map((track) => (
-          <TrackCard key={track.title} {...track} />
+          <TrackCard key={track.title + track.artist} {...track} />
         ))}
       </div>
 

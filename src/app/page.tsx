@@ -28,11 +28,9 @@ export default function Page() {
   return (
     <main className="p-8 space-y-8">
       <h1 className="text-2xl font-bold">🎧 Trackscope</h1>
-
       <TracklistParser
         onParse={(parsed) => setTracks(parsed.map(analyzeTrack))}
       />
-
       <JSONUploader onImport={handleImport} />
 
       <button

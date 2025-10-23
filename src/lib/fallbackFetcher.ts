@@ -21,7 +21,7 @@ async function fetchMusicBrainzTracks(artist: string) {
   );
 
   const data = await res.json();
-  console.log("MBZ raw response:", JSON.stringify(data, null, 2));
+  //   console.log("MBZ raw response:", JSON.stringify(data, null, 2));
   if (!data.recordings || !Array.isArray(data.recordings)) {
     console.warn("MusicBrainz returned no recordings");
     return [];

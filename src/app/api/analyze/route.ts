@@ -22,7 +22,7 @@ export async function POST(req: Request) {
       genre: genre || null,
     });
   } catch (err) {
-    console.error("Beatport fetch error:", err);
+    // console.error("Beatport fetch error:", err);
     return NextResponse.json({ bpm: null, key: null, genre: null });
   }
 }

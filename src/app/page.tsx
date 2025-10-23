@@ -1,58 +1,140 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import TrackCard from "@/components/TrackCard";
-import TrackTable from "@/components/TrackTable";
-import JSONUploader from "@/components/JSONUploader";
-import TracklistParser from "@/components/TracklistParser";
-import { analyzeTrack } from "@/lib/trackAnalyzer";
-import { exportToCSV } from "@/lib/exportCSV";
+import { useState } from "react";
+import { enrichTrackData } from "@/lib/bpmEnricher";
 import { getTrackStats } from "@/lib/trackStats";
-import TrackStatsDisplay from "@/components/TrackStatsDisplay";
-import TrackStatsChart from "@/components/TrackStatsChart";
-import BPMHistogram from "@/components/BPMHistogram";
-import TempoProfile from "@/components/TempoProfile";
+import type { Track } from "@/lib/types";
+import TrackCard from "@/components/TrackCard";
 
-export default function Page() {
-  const [tracks, setTracks] = useState<any[]>([]);
+export default function HomePage() {
+  const [input, setInput] = useState("");
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState<any>(null);
 
-  useEffect(() => {
-    const initial = [
-      { title: "Hypnotic Pulse", artist: "Rødhåd" },
-      { title: "Parallel Shift", artist: "Antigone", bpm: 132 },
-      { title: "Eclipse", artist: "nthng", key: "8A", genre: "Deep Techno" },
-    ].map(analyzeTrack);
-    setTracks(initial);
-  }, []);
+  async function handleParse() {
+    setLoading(true);
+    const lines = input
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
 
-  const handleImport = (raw: any[]) => {
-    const analyzed = raw.map(analyzeTrack);
-    setTracks(analyzed);
-  };
-  const stats = getTrackStats(tracks);
+    let parsed: Track[] = [];
 
-  console.log(stats);
+    // Artist-only Modus
+    if (lines.length === 1 && !lines[0].includes("–")) {
+      const res = await fetch("/api/artist", {
+        method: "POST",
+        body: JSON.stringify({ artist: lines[0] }),
+        headers: { "Content-Type": "application/json" },
+      });
+      parsed = await res.json();
+    } else {
+      // Standard Parsing
+      parsed = lines.map((line) => {
+        const [artist, title] = line.split("–").map((s) => s.trim());
+        return {
+          artist,
+          title,
+          bpm: null,
+          key: null,
+          genre: null,
+        };
+      });
+    }
+
+    const enriched = await enrichTrackData(parsed);
+    setTracks(enriched);
+    setStats(getTrackStats(enriched));
+    setLoading(false);
+  }
+
+  function handleExportCSV() {
+    const header = ["Artist", "Title", "BPM", "Key", "Genre"];
+    const rows = tracks.map((t) => [t.artist, t.title, t.bpm, t.key, t.genre]);
+    const csv = [header, ...rows]
+      .map((r) => r.map((v) => `"${v ?? ""}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "trackscope_export.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
-    <main className="p-8 space-y-8">
+    <main className="max-w-4xl mx-auto p-6 space-y-6">
       <h1 className="text-2xl font-bold">🎧 Trackscope</h1>
-      <TracklistParser onParse={(parsed) => setTracks(parsed)} />
-      <JSONUploader onImport={handleImport} />
-      <button
-        onClick={() => exportToCSV(tracks)}
-        className="bg-blue-600 text-white px-4 py-2 rounded"
-      >
-        Export CSV
-      </button>
-      <div className="grid md:grid-cols-2 gap-4">
-        {tracks.map((track) => (
-          <TrackCard key={track.title + track.artist} {...track} />
-        ))}
+
+      <textarea
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder="Paste tracklist or artist name..."
+        className="w-full h-40 p-2 border rounded"
+      />
+
+      <div className="flex gap-4">
+        <button
+          onClick={handleParse}
+          disabled={loading}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          {loading ? "Parsing..." : "Parse"}
+        </button>
+
+        <button
+          onClick={handleExportCSV}
+          disabled={tracks.length === 0}
+          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+        >
+          Export CSV
+        </button>
       </div>
-      <TrackStatsDisplay tracks={tracks} />;
-      <TrackStatsChart tracks={tracks} />;
-      <BPMHistogram tracks={tracks} />;
-      <TempoProfile tracks={tracks} />;
-      <TrackTable tracks={tracks} />
+
+      {tracks.length > 0 && (
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold">Parsed Tracks</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {tracks.map((track, index) => (
+              <TrackCard
+                key={`${track.artist}-${track.title}-${index}`}
+                track={track}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {stats && (
+        <section className="space-y-2">
+          <h2 className="text-xl font-semibold">📊 Track Stats</h2>
+          <p>
+            <strong>Genres:</strong>{" "}
+            {Object.entries(stats.genreCount)
+              .map(([g, c]) => `${g}: ${c}`)
+              .join(" | ")}
+          </p>
+          <p>
+            <strong>Keys:</strong>{" "}
+            {Object.entries(stats.keyCount)
+              .map(([k, c]) => `${k}: ${c}`)
+              .join(" | ")}
+          </p>
+          <p>
+            <strong>Artists:</strong>{" "}
+            {Object.entries(stats.artistCount)
+              .map(([a, c]) => `${a}: ${c}`)
+              .join(" | ")}
+          </p>
+          <p>
+            <strong>BPM Range:</strong> Min: {stats.bpm.min} | Max:{" "}
+            {stats.bpm.max} | Avg: {stats.bpm.avg}
+          </p>
+        </section>
+      )}
     </main>
   );
 }

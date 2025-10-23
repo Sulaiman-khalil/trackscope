@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import cheerio from "cheerio";
+import * as cheerio from "cheerio";
 
 export async function POST(req: Request) {
   const { artist, title } = await req.json();

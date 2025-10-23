@@ -9,12 +9,19 @@ export async function fetchArtistTracks(artist: string) {
 
 async function fetchMusicBrainzTracks(artist: string) {
   const res = await fetch(
-    `https://musicbrainz.org/ws/2/recording?query=artist:${encodeURIComponent(
+    `https://musicbrainz.org/ws/2/recording?query=artist:"${encodeURIComponent(
       artist
-    )}&fmt=json&limit=10`
+    )}" AND status:official&fmt=json&limit=10`,
+    {
+      headers: {
+        "User-Agent":
+          "Trackscope/1.0 ( https://github.com/Sulaiman-khalil/trackscope )",
+      },
+    }
   );
-  const data = await res.json();
 
+  const data = await res.json();
+  console.log("MBZ raw response:", JSON.stringify(data, null, 2));
   if (!data.recordings || !Array.isArray(data.recordings)) {
     console.warn("MusicBrainz returned no recordings");
     return [];

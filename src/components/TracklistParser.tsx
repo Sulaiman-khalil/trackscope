@@ -1,120 +1,71 @@
 "use client";
 
 import { useState } from "react";
+import { enrichTrackData } from "@/lib/bpmEnricher";
+import type { Track } from "@/lib/types";
 
 export default function TracklistParser({
   onParse,
 }: {
-  onParse: (tracks: any[]) => void;
+  onParse: (tracks: Track[]) => void;
 }) {
   const [input, setInput] = useState("");
-  const [parsed, setParsed] = useState<any[]>([]);
-  const [invalidLines, setInvalidLines] = useState<string[]>([]);
-  const [copied, setCopied] = useState(false);
+  const [parsed, setParsed] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchMetadata = async (artist: string, title: string) => {
-    const res = await fetch("/api/analyze", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ artist, title }),
-    });
-
-    return res.ok ? await res.json() : { bpm: null, key: null, genre: null };
-  };
-
-  const fetchArtistTracks = async (artist: string) => {
-    const res = await fetch("/api/artist", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ artist }),
-    });
-
-    return res.ok ? await res.json() : [];
-  };
-
-  const parseTracklist = async () => {
+  async function handleParse() {
     setLoading(true);
-    const lines = input.split("\n").filter((line) => line.trim());
-    const valid: any[] = [];
-    const invalid: string[] = [];
+    const lines = input
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
 
-    // Artist-only detection
+    let tracks: Track[] = [];
+
+    // Artist-only Modus
     if (lines.length === 1 && !lines[0].includes("–")) {
-      const artistTracks = await fetchArtistTracks(lines[0].trim());
-      setParsed(artistTracks);
-      onParse(artistTracks);
-      setLoading(false);
-      return;
+      const res = await fetch("/api/artist", {
+        method: "POST",
+        body: JSON.stringify({ artist: lines[0] }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      tracks = await res.json();
+    } else {
+      // Standard Parsing
+      tracks = lines.map((line) => {
+        const [artist, title] = line.split("–").map((s) => s.trim());
+        return { artist, title, bpm: null, key: null, genre: null };
+      });
     }
 
-    // Normal parsing
-    for (const line of lines) {
-      const match = line.match(/^(.*)\s+[-–]\s+(.*)$/);
-      if (match) {
-        const [, artist, title] = match;
-        const meta = await fetchMetadata(artist.trim(), title.trim());
-        valid.push({ artist: artist.trim(), title: title.trim(), ...meta });
-      } else {
-        invalid.push(line);
-      }
-    }
-
-    setParsed(valid);
-    setInvalidLines(invalid);
-    onParse(valid);
+    // BPM/Key/Genre Enrichment
+    const enriched = await enrichTrackData(tracks);
+    setParsed(enriched);
+    onParse(enriched);
     setLoading(false);
-  };
-
-  const copyJSON = async () => {
-    await navigator.clipboard.writeText(JSON.stringify(parsed, null, 2));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  }
 
   return (
     <div className="space-y-4">
       <textarea
         value={input}
         onChange={(e) => setInput(e.target.value)}
-        placeholder="Paste tracklist or artist name (e.g. Rødhåd – Hypnotic Pulse or Rødhåd)"
+        placeholder="Paste tracklist or artist name..."
         className="w-full h-40 p-2 border rounded"
       />
-
-      <div className="flex gap-4">
-        <button
-          onClick={parseTracklist}
-          disabled={loading}
-          className="bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          {loading ? "Analyzing..." : "Parse"}
-        </button>
-
-        {parsed.length > 0 && (
-          <button
-            onClick={copyJSON}
-            className="bg-green-600 text-white px-4 py-2 rounded"
-          >
-            {copied ? "Copied!" : "Copy JSON"}
-          </button>
-        )}
-      </div>
+      <button
+        onClick={handleParse}
+        disabled={loading}
+        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+      >
+        {loading ? "Parsing..." : "Parse"}
+      </button>
 
       {parsed.length > 0 && (
-        <pre className="bg-gray-100 p-4 rounded text-sm overflow-x-auto">
+        <pre className="bg-gray-100 p-4 rounded text-sm overflow-auto">
           {JSON.stringify(parsed, null, 2)}
         </pre>
-      )}
-
-      {invalidLines.length > 0 && (
-        <div className="text-red-600 text-sm">
-          ⚠️ Ungültige Zeilen:
-          <ul className="list-disc ml-6">
-            {invalidLines.map((line, i) => (
-              <li key={i}>{line}</li>
-            ))}
-          </ul>
-        </div>
       )}
     </div>
   );

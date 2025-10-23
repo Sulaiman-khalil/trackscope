@@ -20,8 +20,17 @@ export default function TracklistParser({
       body: JSON.stringify({ artist, title }),
     });
 
-    if (!res.ok) return { bpm: null, key: null, genre: null };
-    return await res.json();
+    return res.ok ? await res.json() : { bpm: null, key: null, genre: null };
+  };
+
+  const fetchArtistTracks = async (artist: string) => {
+    const res = await fetch("/api/artist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ artist }),
+    });
+
+    return res.ok ? await res.json() : [];
   };
 
   const parseTracklist = async () => {
@@ -30,6 +39,16 @@ export default function TracklistParser({
     const valid: any[] = [];
     const invalid: string[] = [];
 
+    // Artist-only detection
+    if (lines.length === 1 && !lines[0].includes("–")) {
+      const artistTracks = await fetchArtistTracks(lines[0].trim());
+      setParsed(artistTracks);
+      onParse(artistTracks);
+      setLoading(false);
+      return;
+    }
+
+    // Normal parsing
     for (const line of lines) {
       const match = line.match(/^(.*)\s+[-–]\s+(.*)$/);
       if (match) {
@@ -58,7 +77,7 @@ export default function TracklistParser({
       <textarea
         value={input}
         onChange={(e) => setInput(e.target.value)}
-        placeholder="Paste tracklist here (e.g. Recondite – Tide)"
+        placeholder="Paste tracklist or artist name (e.g. Rødhåd – Hypnotic Pulse or Rødhåd)"
         className="w-full h-40 p-2 border rounded"
       />
 
@@ -68,7 +87,7 @@ export default function TracklistParser({
           disabled={loading}
           className="bg-blue-600 text-white px-4 py-2 rounded"
         >
-          {loading ? "Analyzing..." : "Parse Tracklist"}
+          {loading ? "Analyzing..." : "Parse"}
         </button>
 
         {parsed.length > 0 && (

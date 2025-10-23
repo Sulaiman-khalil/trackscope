@@ -39,7 +39,7 @@ export default function JSONUploader({ onImport }: Props) {
       onImport(enriched);
       setError(null);
     } catch (err) {
-      console.error("JSON parse error:", err);
+      // console.error("JSON parse error:", err);
       setError("Invalid JSON file or format.");
     }
   };

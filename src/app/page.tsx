@@ -5,6 +5,7 @@ import { enrichTrackData } from "@/lib/bpmEnricher";
 import { getTrackStats } from "@/lib/trackStats";
 import type { Track } from "@/lib/types";
 import TrackCard from "@/components/TrackCard";
+import TrackStatsDisplay from "@/components/TrackStatsDisplay";
 
 export default function HomePage() {
   const [input, setInput] = useState("");
@@ -108,33 +109,7 @@ export default function HomePage() {
         </section>
       )}
 
-      {stats && (
-        <section className="space-y-2">
-          <h2 className="text-xl font-semibold">📊 Track Stats</h2>
-          <p>
-            <strong>Genres:</strong>{" "}
-            {Object.entries(stats.genreCount)
-              .map(([g, c]) => `${g}: ${c}`)
-              .join(" | ")}
-          </p>
-          <p>
-            <strong>Keys:</strong>{" "}
-            {Object.entries(stats.keyCount)
-              .map(([k, c]) => `${k}: ${c}`)
-              .join(" | ")}
-          </p>
-          <p>
-            <strong>Artists:</strong>{" "}
-            {Object.entries(stats.artistCount)
-              .map(([a, c]) => `${a}: ${c}`)
-              .join(" | ")}
-          </p>
-          <p>
-            <strong>BPM Range:</strong> Min: {stats.bpm.min} | Max:{" "}
-            {stats.bpm.max} | Avg: {stats.bpm.avg}
-          </p>
-        </section>
-      )}
+      {stats && <TrackStatsDisplay stats={stats} />}
     </main>
   );
 }

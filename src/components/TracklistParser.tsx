@@ -11,8 +11,21 @@ export default function TracklistParser({
   const [parsed, setParsed] = useState<any[]>([]);
   const [invalidLines, setInvalidLines] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const parseTracklist = () => {
+  const fetchMetadata = async (artist: string, title: string) => {
+    const res = await fetch("/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ artist, title }),
+    });
+
+    if (!res.ok) return { bpm: null, key: null, genre: null };
+    return await res.json();
+  };
+
+  const parseTracklist = async () => {
+    setLoading(true);
     const lines = input.split("\n").filter((line) => line.trim());
     const valid: any[] = [];
     const invalid: string[] = [];
@@ -21,7 +34,8 @@ export default function TracklistParser({
       const match = line.match(/^(.*)\s+[-–]\s+(.*)$/);
       if (match) {
         const [, artist, title] = match;
-        valid.push({ title: title.trim(), artist: artist.trim() });
+        const meta = await fetchMetadata(artist.trim(), title.trim());
+        valid.push({ artist: artist.trim(), title: title.trim(), ...meta });
       } else {
         invalid.push(line);
       }
@@ -30,6 +44,7 @@ export default function TracklistParser({
     setParsed(valid);
     setInvalidLines(invalid);
     onParse(valid);
+    setLoading(false);
   };
 
   const copyJSON = async () => {
@@ -50,9 +65,10 @@ export default function TracklistParser({
       <div className="flex gap-4">
         <button
           onClick={parseTracklist}
+          disabled={loading}
           className="bg-blue-600 text-white px-4 py-2 rounded"
         >
-          Parse Tracklist
+          {loading ? "Analyzing..." : "Parse Tracklist"}
         </button>
 
         {parsed.length > 0 && (
